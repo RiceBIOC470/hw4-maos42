@@ -68,7 +68,7 @@ ylabel('Average Intensities','FontSize',28);
 % value, as I go further, from size 1 to 5, the stdev reduces down to 8.52,
 % almost 4 times. From the circles of size 20, 25 and 30, we can see their
 % stdev its very similar. This could be due the fact that the longer the
-% circle is the less space availabe it will have in 1024x1024 image. 
+% circle is the less space availabe it will have ina 1024x1024 image. 
 
 %%
 
@@ -121,6 +121,8 @@ imgp1c1f2=bfGetPlane(reader1,plane1c1f2); imgp1c2f2=bfGetPlane(reader1,plane1c2f
 frame2=cat(3,imadjust(imgp1c1f2),imadjust(imgp1c2f2),zeros(x1));
 
 movie=stack(2,frame1,frame2);
+
+
 
 %pero esta entra hasta después del frame 19
 plane2=reader2.getIndex(z2-1,c2-2,0)+1;
@@ -185,13 +187,12 @@ nCIA(maskfrom4,imagefrom2);
 
 plane12=reader1.getIndex(z1-3,c1-1,time1-19)+1;
 imgp12=bfGetPlane(reader1,plane12);
-figure(7); imshow(imgp12,[]);
-figure(8); imshow(imagefrom2,[]);
+imshow(imgp12,[]);
 
-newimgc2=smoothbg(imgp12,2,2,200);
-figure(9); imshow(newimgc2);
-nCIA(imagefrom2,newimgc2); %why do I get a NaN ?!??!?!?!!
+newimgc2=smoothbg(imgp12,2,10,100);
 
+values=nCIA(imagefrom2,newimgc2);
+values(3)
 
 
 %%
