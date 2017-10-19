@@ -186,7 +186,7 @@ imgmax12=bfGetPlane(reader1,ind12);
 for ii=1:z1
     ind12=reader1.getIndex(ii-1,c1-1,0)+1;
     imgnow12=bfGetPlane(reader1,ind12);
-    imgmax12=max(imgmax12,imgnow);
+    imgmax12=max(imgmax12,imgnow12);
 end
 
 imshow(imgmax12,[]);
