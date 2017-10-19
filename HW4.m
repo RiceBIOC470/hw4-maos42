@@ -101,29 +101,19 @@ ylabel('Average Intensities','FontSize',28);
 %it. 
 
 file1='nfkb_movie1.tif';
-reader1=bfGetReader(file1); %this generates a Warning
-
 file2='nfkb_movie2.tif';
-reader2=bfGetReader(file2); %this generates a Warning
+makefvideo( file1, file2 );
 
-x1=reader1.getSizeX; x2=reader2.getSizeX;
-y1=reader1.getSizeY; y2=reader2.getSizeY;
-z1=reader1.getSizeZ; z2=reader2.getSizeZ;
-c1=reader1.getSizeC; c2=reader2.getSizeC;
-time1=reader1.getSizeT; time2=reader2.getSizeT;
-
-plane1c1f1=reader1.getIndex(z1-1,c1-2,0)+1; plane1c2f1=reader1.getIndex(z1-1,c1-1,0)+1;
-imgp1c1f1=bfGetPlane(reader1,plane1c1f1); imgp1c2f1=bfGetPlane(reader1,plane1c2f1);
-frame1=cat(3,imadjust(imgp1c1f1),imadjust(imgp1c2f1),zeros(x1));
-
-plane1c1f2=reader1.getIndex(z1-1,c1-2,1)+1; plane1c2f2=reader1.getIndex(z1-1,c1-1,1)+1;
-imgp1c1f2=bfGetPlane(reader1,plane1c1f2); imgp1c2f2=bfGetPlane(reader1,plane1c2f2);
-frame2=cat(3,imadjust(imgp1c1f2),imadjust(imgp1c2f2),zeros(x1));
-
-movie=stack(2,frame1,frame2);
-
-%pero esta entra hasta después del frame 19
-plane2=reader2.getIndex(z2-1,c2-2,0)+1;
+%Miguel Angel: I made a function to recreate image/video from code because I
+%had to use a lot of variables in order to create it. I had to make frame
+%per frame. I know it is not the best way to do it, if not the worst,
+%however I couldn't do it with a loop. The image output isfmovie.tif, and it
+%does have the full 37 frames, however I don't know why, Matlab is not
+%putting them as timelapse, because when I open the image in Fiji, it
+%doesn't recognize it as a movie, BUT !!! if you open it on finder with
+%Preview it will show all the frames. I tried to make it a gif, but the
+%image is UINT16, I tried to convert it to UINT8 but that didn't work as
+%well. But technically I recreated the concatenated tif.
 
 
 %%
@@ -142,9 +132,16 @@ x1=reader1.getSizeX; y1=reader1.getSizeY;
 z1=reader1.getSizeZ;  c1=reader1.getSizeC; 
 time1=reader1.getSizeT; 
 
-plane1=reader1.getIndex(z1-1,c1-2,time1-19)+1;
-imgp1=bfGetPlane(reader1,plane1);
-imshow(imadjust(imgp1),[]);
+ind=reader1.getIndex(0,0,0)+1;
+imgmax=bfGetPlane(reader1,ind);
+
+for ii=1:z1
+    ind=reader1.getIndex(ii-1,0,0)+1;
+    imgnow=bfGetPlane(reader1,ind);
+    imgmax=max(imgmax,imgnow);
+end
+
+imshow(imgmax,[]);
 
 % 2. Write a function which performs smoothing and background subtraction
 % on an image and apply it to the image from (1). Any necessary parameters
@@ -155,13 +152,13 @@ imshow(imadjust(imgp1),[]);
 %gaussian blur, the third is the sigma value for gaussian blur and the
 %last, is the size of the strel for background substraction.
 
-smoothbg(imgp1,2,10,100);
+smoothbg(imgmax,2,10,100);
 
 % 3. Write  a function which automatically determines a threshold  and
 % thresholds an image to make a binary mask. Apply this to your output
 % image from 2. 
 
-imagefrom2=smoothbg(imgp1,2,10,100);
+imagefrom2=smoothbg(imgmax,2,10,100);
 ithreshold(imagefrom2);
 
 % 4. Write a function that "cleans up" this binary mask - i.e. no small
@@ -183,16 +180,33 @@ nCIA(maskfrom4,imagefrom2);
 % from channel 1 (that is the max intensity projection from the same time point). Apply your
 % function from 5 to get the mean intensity of the cells in this channel. 
 
-plane12=reader1.getIndex(z1-3,c1-1,time1-19)+1;
-imgp12=bfGetPlane(reader1,plane12);
-figure(7); imshow(imgp12,[]);
-figure(8); imshow(imagefrom2,[]);
+ind12=reader1.getIndex(0,c1-1,0)+1;
+imgmax12=bfGetPlane(reader1,ind12);
 
-newimgc2=smoothbg(imgp12,2,2,200);
-figure(9); imshow(newimgc2);
-nCIA(imagefrom2,newimgc2); %why do I get a NaN ?!??!?!?!!
+for ii=1:z1
+    ind12=reader1.getIndex(ii-1,c1-1,0)+1;
+    imgnow12=bfGetPlane(reader1,ind12);
+    imgmax12=max(imgmax12,imgnow);
+end
 
+imshow(imgmax12,[]);
 
+%Note: I don't know why it is picking up the nucleus if I'm specifying
+%channel 2, where the membrane is. If you increase the brigthness you can
+%see really low the membrane, so somehow the channel 1 is showing up in
+%channel 2 as well.
+
+newimgc2=smoothbg(imgmax12,2,2,200);
+figure(9); imshow(newimgc2,[]);
+imadjust(newimgc2);
+
+nCIA(imagefrom2,newimgc2);
+
+%I don't know why I get a NaN value on the mean Intensity,  it could
+%be due the fact that on channel 2 the membrane is really low, so at the
+%moment of doing operations is taking channel 2 as completely black, ergo,
+%as zero, and that is why it cannot compare it against the image from
+%channel 1.
 
 %%
 % Problem 4. 
@@ -200,8 +214,55 @@ nCIA(imagefrom2,newimgc2); %why do I get a NaN ?!??!?!?!!
 % 1. Write a loop that calls your functions from Problem 3 to produce binary masks
 % for every time point in the two movies. Save a movie of the binary masks.
 
+file1='nfkb_movie1.tif'; file2='nfkb_movie2.tif';
+reader1=bfGetReader(file1); reader2=bfGetReader(file2);
 
+x1=reader1.getSizeX; y1=reader1.getSizeY; x2=reader2.getSizeX; y2=reader2.getSizeY; 
+z1=reader1.getSizeZ;  c1=reader1.getSizeC; z2=reader2.getSizeZ;  c2=reader2.getSizeC; 
+time1=reader1.getSizeT; time2=reader2.getSizeT; 
 
+%for movie 1
+
+for jj=1:time1
+for ii=1:z1    
+ind1=reader1.getIndex(ii-1,0,jj-1)+1;
+imgmax1=bfGetPlane(reader1,ind1);
+imgnow1=bfGetPlane(reader1,ind);
+imgmax1=max(imgmax1,imgnow);
+end
+
+imgmax1=smoothbg(imgmax1,2,10,100);
+imgmax1=ithreshold(imgmax1);
+imgmax1=ithreshold(imgmax1);
+imgmax1=cleaner(imgmax1);
+   
+if jj<2
+imwrite(imgmax1, 'bmaskmovie.tif');
+else
+imwrite(imgmax1,'bmaskmovie.tif','WriteMode','append');
+end
+end
+
+%for appending movie 2
+
+for jj2=1:time2
+for ii2=1:z2    
+ind2=reader2.getIndex(ii2-1,0,jj2-1)+1;
+imgmax2=bfGetPlane(reader2,ind2);
+imgnow2=bfGetPlane(reader2,ind2);
+imgmax2=max(imgmax2,imgnow2);
+end
+
+imgmax2=smoothbg(imgmax2,2,10,100);
+imgmax2=ithreshold(imgmax2);
+imgmax2=ithreshold(imgmax2);
+imgmax2=cleaner(imgmax2);
+   
+imwrite(imgmax2,'bmaskmovie.tif','WriteMode','append');
+
+end
+
+bmaskmovie=imopen('bmaskmovie.tif'); %file of the movie/tif
 
 % 2. Use a loop to call your function from problem 3, part 5 on each one of
 % these masks and the corresponding images and 
@@ -209,3 +270,108 @@ nCIA(imagefrom2,newimgc2); %why do I get a NaN ?!??!?!?!!
 % channels as a function of time. Make plots of these with time on the
 % x-axis and either number of cells or intensity on the y-axis. 
 
+store=zeros(time1+time2,3);
+
+for jj=1:time1
+for ii=1:z1    
+ind1=reader1.getIndex(ii-1,0,jj-1)+1;
+imgmax1=bfGetPlane(reader1,ind1);
+imgnow1=bfGetPlane(reader1,ind);
+imgmax1=max(imgmax1,imgnow);
+end
+
+imgmax1=smoothbg(imgmax1,2,10,100);
+imgmax1=ithreshold(imgmax1);
+imgmax1=ithreshold(imgmax1);
+imgmax1=cleaner(imgmax1);
+
+store(jj,:)=nCIA(imgmax1,imgnow1);
+end
+
+%for getting values of movie 2
+
+for jj2=1:time2
+for ii2=1:z2    
+ind2=reader2.getIndex(ii2-1,0,jj2-1)+1;
+imgmax2=bfGetPlane(reader2,ind2);
+imgnow2=bfGetPlane(reader2,ind2);
+imgmax2=max(imgmax2,imgnow2);
+end
+
+imgmax2=smoothbg(imgmax2,2,10,100);
+imgmax2=ithreshold(imgmax2);
+imgmax2=ithreshold(imgmax2);
+imgmax2=cleaner(imgmax2);
+
+store(jj+jj2,:)=nCIA(imgmax2,imgnow2);
+end
+totaltime=time1+time2; %just to simplify things
+
+%plots for channel 1 
+plot(1:totaltime, store(:,1));
+xlabel('Time Points','FontSize',28);
+ylabel('Number of Cells','FontSize',28);
+title('Plots in Channel 1');
+
+plot(1:totaltime, store(:,2));
+xlabel('Time Points','FontSize',28);
+ylabel('Mean Intensities','FontSize',28);
+title('Plots in Channel 1');
+
+%
+%
+%for Channel 2
+
+store2=zeros(time1+time2,3);
+
+for jj=1:time1
+for ii=1:z1    
+ind1=reader1.getIndex(ii-1,1,jj-1)+1;
+imgmax1=bfGetPlane(reader1,ind1);
+imgnow1=bfGetPlane(reader1,ind);
+imgmax1=max(imgmax1,imgnow);
+end
+
+imgmax1=smoothbg(imgmax1,2,10,100);
+imgmax1=ithreshold(imgmax1);
+imgmax1=ithreshold(imgmax1);
+imgmax1=cleaner(imgmax1);
+
+store(jj,:)=nCIA(imgmax1,imgnow1);
+end
+
+%for getting values of movie 2
+
+for jj2=1:time2
+for ii2=1:z2    
+ind2=reader2.getIndex(ii2-1,1,jj2-1)+1;
+imgmax2=bfGetPlane(reader2,ind2);
+imgnow2=bfGetPlane(reader2,ind2);
+imgmax2=max(imgmax2,imgnow2);
+end
+
+imgmax2=smoothbg(imgmax2,2,10,100);
+imgmax2=ithreshold(imgmax2);
+imgmax2=ithreshold(imgmax2);
+imgmax2=cleaner(imgmax2);
+
+store2(jj+jj2,:)=nCIA(imgmax2,imgnow2);
+end
+totaltime=time1+time2; %just to simplify things
+
+%plots for channel 2 
+plot(1:totaltime, store2(:,1));
+xlabel('Time Points','FontSize',28);
+ylabel('Number of Cells','FontSize',28);
+title('Plots in Channel 2');
+
+plot(1:totaltime, store2(:,2));
+xlabel('Time Points','FontSize',28);
+ylabel('Mean Intensities','FontSize',28);
+title('Plots in Channel 2');
+
+%this second round of plots are really bad, particularly because channel 2
+%are membranes so it is harder to determine the number of cells with them,
+%and as I said earlier, on movie 1, the membrane (channel 2) is really low,
+%which messes up the binary masks, also, most of this is optimized for cell
+%nucleus, and it is easier to count them in channel 1 than 2. 
