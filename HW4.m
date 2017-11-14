@@ -1,5 +1,22 @@
 %HW4
 %% 
+
+%GB comments
+1a 100
+1b 100
+1c 100
+1d 100
+2a 100
+2b. 75 the code is a bit clunky as you admitted. The problem, on my end, is I cannot return a full length avi of both channels. One of two events occurs when I try to run the code. 1) I return only a nuclear image video or 2) return a single tif file of both channels. See me and we can chat how to fix this issue.  
+3a. 100
+3b 100
+3c 100
+3d 100
+3e 50 I am not returning the correct answer. Set up a time with me and we can try to figure out what is wrong. My short answer is I think you are using the wrong channel information. 
+4a. 100
+4b. 100
+ Overall = 94
+
 % Problem 1. 
 
 % 1. Write a function to generate an 8-bit image of size 1024x1024 with a random value 
